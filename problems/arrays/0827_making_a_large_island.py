@@ -3,144 +3,71 @@
 Topic: Principal, Array, Depth-First Search, Breadth-First Search,
   Union-Find, Matrix, Weekly Contest 82
 Difficulty: Hard
-Status: Solved
-Date: 2026-03-20
+Status: Solved & Reworked
+Date: 2026-03-21
 
 Key idea:
-- Scan row-by-row, remembering what happened at the previous row
-- Keep track of coastline ("sea" next to "islands") and islands
-- For islands keep track of islands that represent the "name" of the island
-- When islands merge islands are identified
-- Keep track of island sizes
-- For coastline keep track of neighboring islands
-
-Mistakes:
-- If no coastline, it could be the case that everything is sea,
-  not only one island
-- Mistake in indices.
-- when deleted a island did not clear value in `island_sizes`
-- when merging two islands we need to identify not only these two islands, but
-  also all islands previously identified with them
+- Every time one encounters an island, DSF to find all pieces of it
+  and label every square in the island by a unique identifier, an integer.
+- For every identifier remember the size of an island.
+- For every sea square find the sum of island around it.
 """
 
 from typing import List
-from dataclasses import dataclass
-from collections import defaultdict, deque
-
-
-# a mutable version of `int`
-@dataclass(slots=True)
-class Island:
-    name: int
-
-
-class Archipelago:
-    def __init__(self):
-        self.counter = 0
-        # `all_names[name]` is all instances of `Island` with this `name`.
-        self.all_names = {}
-        self.island_sizes = defaultdict(int)
-
-    def newIsland(self):
-        new_island = Island(self.counter)
-        self.counter += 1
-        self.all_names[new_island.name] = [new_island]
-        return new_island
-
-    def mergedIsland(self, isl1, isl2):
-        if isl1.name == isl2.name:
-            return self.all_names[isl1.name][0]
-
-        kept_name = isl1.name
-        obsolete_name = isl2.name
-        for alias in self.all_names[obsolete_name]:
-            alias.name = kept_name
-        self.island_sizes[kept_name] += self.island_sizes[obsolete_name]
-        del self.island_sizes[obsolete_name]
-        self.all_names[kept_name] += self.all_names[obsolete_name]
-        del self.all_names[obsolete_name]
-        return self.all_names[kept_name][0]
-
-    def islandFromNeighbors(self, left_island, top_island):
-        if left_island is None and top_island is None:
-            return self.newIsland()
-        if left_island is None:
-            return top_island
-        if top_island is None:
-            return left_island
-        return self.mergedIsland(left_island, top_island)
+from collections import defaultdict
 
 
 class Solution:
     def largestIsland(self, grid: List[List[int]]) -> int:
-        archipelago = Archipelago()
-        shared_coastline = deque()
-        islands_current_row = {}
-        coastline_current_row = {}
-        for i in range(len(grid)):
-            left_island = None
-            islands_row_above = islands_current_row
-            islands_current_row = {}
-            coastline_row_above = coastline_current_row
-            coastline_current_row = defaultdict(list)
-            for j in range(len(grid)):
-                if grid[i][j] == 1:
-                    top_island = islands_row_above.get(j, None)
-                    island = archipelago.islandFromNeighbors(left_island, top_island)
-                    islands_current_row[j] = island
-                    archipelago.island_sizes[island.name] += 1
+        # 0 and 1 are already used, we will use colors starting from 2
+        # for islands
+        current_color = 2
+        island_size = defaultdict(int)
+        directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]
 
-                    # sea above
-                    if i != 0 and top_island is None:
-                        coastline_row_above[j].append(island)
-                    # see to the left
-                    if j != 0 and left_island is None:
-                        coastline_current_row[j - 1].append(island)
+        def dfs(r, c):
+            if r < 0 or r >= len(grid) or c < 0 or c >= len(grid) or grid[r][c] != 1:
+                return
+            grid[r][c] = current_color
+            island_size[current_color] += 1
 
-                    left_island = island
+            for dr, dc in directions:
+                dfs(r + dr, c + dc)
 
-                elif grid[i][j] == 0:
-                    if left_island is not None:
-                        coastline_current_row[j].append(left_island)
-                    # looking for the island above
-                    if j in islands_row_above:
-                        coastline_current_row[j].append(islands_row_above[j])
+        def color_island(r, c):
+            nonlocal current_color
+            dfs(r, c)
+            current_color += 1
 
-                    left_island = None
+        def island_color_and_size(r, c):
+            if r < 0 or r >= len(grid) or c < 0 or c >= len(grid) or grid[r][c] == 0:
+                return None, 0
 
-            # no need to check coastlines to one island,
-            # record only coastline shared by at least two islands
-            shared_coastline.extend(
-                cl for cl in coastline_row_above.values() if len(cl) > 1
-            )
+            # never computed before
+            if grid[r][c] == 1:
+                color_island(r, c)
 
-        # coastline on the last row has not been added
-        shared_coastline.extend(
-            cl for cl in coastline_current_row.values() if len(cl) > 1
-        )
+            color = grid[r][c]
+            return color, island_size[color]
 
-        # islands do not have shared coastline only if
-        # we got not touching islands or everything is sea
-        if not shared_coastline:
-            max_island = max(archipelago.island_sizes.values(), default=0)
-            if max_island != len(grid) ** 2:
-                max_island += 1
-            return max_island
+        largest_island = 0
+        for r in range(len(grid)):
+            for c in range(len(grid)):
+                if grid[r][c] == 0:
+                    neighbors_colors_and_sizes = set(
+                        island_color_and_size(r + dr, c + dc) for dr, dc in directions
+                    )
 
-        max_island = 0
-        for cl_piece in shared_coastline:
-            # don't count same island twice; didn't do earlier because
-            # islands could've merged
-            neighbor_islands = set(island.name for island in cl_piece)
-            new_island = sum(
-                archipelago.island_sizes[isld] for isld in neighbor_islands
-            )
-            # one new piece of land added!
-            new_island += 1
-            if new_island > max_island:
-                max_island = new_island
+                    new_island = sum(size for _, size in neighbors_colors_and_sizes) + 1
 
-        return max_island
+                    if new_island > largest_island:
+                        largest_island = new_island
+
+        if largest_island == 0:
+            # only possible if there is no water
+            return len(grid) ** 2
+
+        return largest_island
 
 
 def test():
