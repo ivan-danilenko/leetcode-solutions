@@ -3,6 +3,9 @@
 .DS_Store?
 *.DS_Store
 
+# binary files
+build/
+
 # explicitly local files
 *_local*
 
