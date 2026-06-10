@@ -39,55 +39,59 @@ public:
 
 // -------------------- Test helpers --------------------
 
-TreeNode *makeTree(const vector<optional<int>> &values)
+// to create a tree without a need for explicit destruction call
+class Tree
 {
-    if (values.empty() || !values[0].has_value())
+public:
+    TreeNode *root = nullptr;
+
+    Tree() = default;
+
+    Tree(const vector<optional<int>> &values)
     {
-        return nullptr;
-    }
-
-    TreeNode *root = new TreeNode(values[0].value());
-    queue<TreeNode *> q;
-    q.push(root);
-
-    size_t i = 1;
-
-    while (!q.empty() && i < values.size())
-    {
-        TreeNode *curr = q.front();
-        q.pop();
-
-        // left child
-        if (i < values.size() && values[i].has_value())
+        if (values.empty() || !values[0].has_value())
         {
-            curr->left = new TreeNode(values[i].value());
-            q.push(curr->left);
+            return;
         }
-        ++i;
+        nodes.reserve(values.size());
 
-        // right child
-        if (i < values.size() && values[i].has_value())
+        root = makeNode(values[0].value());
+
+        queue<TreeNode *> q;
+        q.push(root);
+
+        size_t i{1};
+
+        while (!q.empty() && i < values.size())
         {
-            curr->right = new TreeNode(values[i].value());
-            q.push(curr->right);
+            TreeNode *curr = q.front();
+            q.pop();
+
+            if (i < values.size() && values[i].has_value())
+            {
+                curr->left = makeNode(values[i].value());
+                q.push(curr->left);
+            }
+            ++i;
+
+            if (i < values.size() && values[i].has_value())
+            {
+                curr->right = makeNode(values[i].value());
+                q.push(curr->right);
+            }
+            ++i;
         }
-        ++i;
     }
 
-    return root;
-}
+private:
+    vector<unique_ptr<TreeNode>> nodes;
 
-void deleteTree(TreeNode *root)
-{
-    if (root == nullptr)
+    TreeNode *makeNode(int val)
     {
-        return;
+        nodes.push_back(make_unique<TreeNode>(val));
+        return nodes.back().get();
     }
-
-    deleteTree(root->left);
-    deleteTree(root->right);
-    delete root;
-}
+};
 
 template <typename T>
 void expectEqual(const T &actual, const T &expected, const string &testName)
@@ -111,23 +115,19 @@ int main()
     Solution sol;
 
     {
-        vector<optional<int>> values = {3, 9, 20, nullopt, nullopt, 15, 7};
-        auto tree = makeTree(values);
+        Tree tree = {{3, 9, 20, nullopt, nullopt, 15, 7}};
         auto expected = 3;
 
-        auto actual = sol.maxDepth(tree);
+        auto actual = sol.maxDepth(tree.root);
         expectEqual(actual, expected, "example 1");
-        deleteTree(tree);
     }
 
     {
-        vector<optional<int>> values = {1, nullopt, 2};
-        auto tree = makeTree(values);
+        Tree tree = {{1, nullopt, 2}};
         auto expected = 2;
 
-        auto actual = sol.maxDepth(tree);
+        auto actual = sol.maxDepth(tree.root);
         expectEqual(actual, expected, "example 2");
-        deleteTree(tree);
     }
 
     return 0;

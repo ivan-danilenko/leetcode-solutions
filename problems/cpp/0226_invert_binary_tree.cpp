@@ -44,55 +44,59 @@ public:
 
 // -------------------- Test helpers --------------------
 
-TreeNode *makeTree(const vector<optional<int>> &values)
+// to create a tree without a need for explicit destruction call
+class Tree
 {
-    if (values.empty() || !values[0].has_value())
+public:
+    TreeNode *root = nullptr;
+
+    Tree() = default;
+
+    Tree(const vector<optional<int>> &values)
     {
-        return nullptr;
-    }
-
-    TreeNode *root = new TreeNode(values[0].value());
-    queue<TreeNode *> q;
-    q.push(root);
-
-    size_t i = 1;
-
-    while (!q.empty() && i < values.size())
-    {
-        TreeNode *curr = q.front();
-        q.pop();
-
-        // left child
-        if (i < values.size() && values[i].has_value())
+        if (values.empty() || !values[0].has_value())
         {
-            curr->left = new TreeNode(values[i].value());
-            q.push(curr->left);
+            return;
         }
-        ++i;
+        nodes.reserve(values.size());
 
-        // right child
-        if (i < values.size() && values[i].has_value())
+        root = makeNode(values[0].value());
+
+        queue<TreeNode *> q;
+        q.push(root);
+
+        size_t i{1};
+
+        while (!q.empty() && i < values.size())
         {
-            curr->right = new TreeNode(values[i].value());
-            q.push(curr->right);
+            TreeNode *curr = q.front();
+            q.pop();
+
+            if (i < values.size() && values[i].has_value())
+            {
+                curr->left = makeNode(values[i].value());
+                q.push(curr->left);
+            }
+            ++i;
+
+            if (i < values.size() && values[i].has_value())
+            {
+                curr->right = makeNode(values[i].value());
+                q.push(curr->right);
+            }
+            ++i;
         }
-        ++i;
     }
 
-    return root;
-}
+private:
+    vector<unique_ptr<TreeNode>> nodes;
 
-void deleteTree(TreeNode *root)
-{
-    if (root == nullptr)
+    TreeNode *makeNode(int val)
     {
-        return;
+        nodes.push_back(make_unique<TreeNode>(val));
+        return nodes.back().get();
     }
-
-    deleteTree(root->left);
-    deleteTree(root->right);
-    delete root;
-}
+};
 
 bool sameTree(TreeNode *p, TreeNode *q)
 {
@@ -124,39 +128,30 @@ int main()
     Solution sol;
 
     {
-        vector<optional<int>> values1 = {4, 2, 7, 1, 3, 6, 9};
-        auto tree = makeTree(values1);
-        vector<optional<int>> values2 = {4, 7, 2, 9, 6, 3, 1};
-        auto expected = makeTree(values2);
+        Tree tree{{4, 2, 7, 1, 3, 6, 9}};
+        Tree inv_tree{{4, 7, 2, 9, 6, 3, 1}};
+        auto expected = inv_tree.root;
 
-        auto actual = sol.invertTree(tree);
+        auto actual = sol.invertTree(tree.root);
         expectEqualTree(actual, expected, "example 1");
-        deleteTree(tree);
-        deleteTree(expected);
     }
 
     {
-        vector<optional<int>> values1 = {2, 1, 3};
-        auto tree = makeTree(values1);
-        vector<optional<int>> values2 = {2, 3, 1};
-        auto expected = makeTree(values2);
+        Tree tree{{2, 1, 3}};
+        Tree inv_tree{{2, 3, 1}};
+        auto expected = inv_tree.root;
 
-        auto actual = sol.invertTree(tree);
+        auto actual = sol.invertTree(tree.root);
         expectEqualTree(actual, expected, "example 2");
-        deleteTree(tree);
-        deleteTree(expected);
     }
 
     {
-        vector<optional<int>> values1 = {};
-        auto tree = makeTree(values1);
-        vector<optional<int>> values2 = {};
-        auto expected = makeTree(values2);
+        Tree tree{{}};
+        Tree inv_tree{{}};
+        auto expected = inv_tree.root;
 
-        auto actual = sol.invertTree(tree);
+        auto actual = sol.invertTree(tree.root);
         expectEqualTree(actual, expected, "example 3");
-        deleteTree(tree);
-        deleteTree(expected);
     }
 
     return 0;

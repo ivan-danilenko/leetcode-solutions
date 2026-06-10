@@ -88,7 +88,7 @@ public:
         queue<TreeNode *> q;
         q.push(root);
 
-        size_t i = 1;
+        size_t i{1};
 
         while (!q.empty() && i < values.size())
         {
