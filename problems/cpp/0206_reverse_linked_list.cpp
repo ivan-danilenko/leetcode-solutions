@@ -43,29 +43,37 @@ public:
 
 // -------------------- Test helpers --------------------
 
-ListNode *makeList(const vector<int> &values)
+// to create a tree without a need for explicit destruction call
+class List
 {
-    ListNode dummy;
-    ListNode *tail = &dummy;
+public:
+    ListNode *head = nullptr;
 
-    for (int x : values)
+    List() = default;
+
+    List(const vector<int> &values)
     {
-        tail->next = new ListNode(x);
-        tail = tail->next;
+        ListNode dummy;
+        ListNode *tail = &dummy;
+
+        for (int x : values)
+        {
+            tail->next = makeNode(x);
+            tail = tail->next;
+        }
+
+        this->head = dummy.next;
     }
 
-    return dummy.next;
-}
+private:
+    vector<unique_ptr<ListNode>> nodes;
 
-void deleteList(ListNode *head)
-{
-    while (head != nullptr)
+    ListNode *makeNode(int val)
     {
-        ListNode *next = head->next;
-        delete head;
-        head = next;
+        nodes.push_back(make_unique<ListNode>(val));
+        return nodes.back().get();
     }
-}
+};
 
 void printList(ListNode *head)
 {
@@ -125,55 +133,39 @@ int main()
     Solution sol;
 
     {
-        vector<int> values = {1, 2, 3, 4, 5};
-        auto list = makeList(values);
-        vector<int> values_exp = {5, 4, 3, 2, 1};
-        auto expected = makeList(values_exp);
+        List list{{1, 2, 3, 4, 5}};
+        List rev_list{{5, 4, 3, 2, 1}};
+        auto expected = rev_list.head;
 
-        auto actual = sol.reverseList(list);
+        auto actual = sol.reverseList(list.head);
         expectListEqual(actual, expected, "example 1");
-        deleteList(expected);
-        // we don't do `deleteList(list);` because nodes are the same as in `expected`
-        deleteList(actual);
     }
 
     {
-        vector<int> values = {1, 2};
-        auto list = makeList(values);
-        vector<int> values_exp = {2, 1};
-        auto expected = makeList(values_exp);
+        List list{{1, 2}};
+        List rev_list{{2, 1}};
+        auto expected = rev_list.head;
 
-        auto actual = sol.reverseList(list);
+        auto actual = sol.reverseList(list.head);
         expectListEqual(actual, expected, "example 2");
-        deleteList(expected);
-        // we don't do `deleteList(list);` because nodes are the same as in `expected`
-        deleteList(actual);
     }
 
     {
-        vector<int> values = {1};
-        auto list = makeList(values);
-        vector<int> values_exp = {1};
-        auto expected = makeList(values_exp);
-        
-        auto actual = sol.reverseList(list);
+        List list{{1}};
+        List rev_list{{1}};
+        auto expected = rev_list.head;
+
+        auto actual = sol.reverseList(list.head);
         expectListEqual(actual, expected, "example 3");
-        deleteList(expected);
-        // we don't do `deleteList(list);` because nodes are the same as in `expected`
-        deleteList(actual);
     }
 
     {
-        vector<int> values = {};
-        ListNode* list = makeList(values);
-        vector<int> values_exp = {};
-        ListNode* expected = makeList(values_exp);
+        List list;
+        List rev_list;
+        auto expected = rev_list.head;
 
-        ListNode* actual = sol.reverseList(list);
+        auto actual = sol.reverseList(list.head);
         expectListEqual(actual, expected, "example 4");
-        deleteList(expected);
-        // we don't do `deleteList(list);` because nodes are the same as in `expected`
-        deleteList(actual);
     }
 
     return 0;
