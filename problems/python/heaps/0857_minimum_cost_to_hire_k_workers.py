@@ -2,7 +2,7 @@
 857. Minimum Cost to Hire K Workers
 Topic: Principal, Array, Greedy, Sorting, Heap (Priority Queue), Weekly Contest 90
 Difficulty: Hard
-Status: ?
+Status: Solved
 Date: 2026-05-21
 
 Key idea:
